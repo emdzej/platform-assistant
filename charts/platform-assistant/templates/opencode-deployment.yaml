@@ -1,0 +1,168 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platform-assistant.opencode.fullname" . }}
+  labels:
+    {{- include "platform-assistant.opencode.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.opencode.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "platform-assistant.opencode.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/opencode-configmap.yaml") . | sha256sum }}
+        {{- with .Values.opencode.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "platform-assistant.opencode.selectorLabels" . | nindent 8 }}
+        {{- with .Values.opencode.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.opencode.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.opencode.registry.enabled }}
+      initContainers:
+        - name: fetch-registry
+          image: "{{ .Values.opencode.registry.image.registry }}/{{ .Values.opencode.registry.image.repository }}:{{ .Values.opencode.registry.image.tag }}"
+          imagePullPolicy: {{ .Values.opencode.registry.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              DEST=/workspace/.opencode
+              rm -rf /tmp/registry
+              git clone --depth 1 --branch {{ .Values.opencode.registry.ref }} \
+                {{ .Values.opencode.registry.repository }} /tmp/registry
+              # Copy registry content into the workspace .opencode directory
+              rm -rf "$DEST"
+              cp -r "/tmp/registry/{{ .Values.opencode.registry.path }}" "$DEST"
+              rm -rf /tmp/registry
+              echo "Registry synced from {{ .Values.opencode.registry.repository }}@{{ .Values.opencode.registry.ref }}"
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+      {{- end }}
+
+      containers:
+        - name: opencode
+          image: "{{ .Values.opencode.image.registry }}/{{ .Values.opencode.image.repository }}:{{ .Values.opencode.image.tag }}"
+          imagePullPolicy: {{ .Values.opencode.image.pullPolicy }}
+          args:
+            - web
+            - --hostname
+            - {{ .Values.opencode.web.hostname | quote }}
+            - --port
+            - {{ .Values.opencode.web.port | quote }}
+          workingDir: /workspace
+          ports:
+            - name: http
+              containerPort: {{ .Values.opencode.web.port }}
+              protocol: TCP
+          env:
+            # Point OpenCode config to the mounted file
+            - name: OPENCODE_CONFIG
+              value: /etc/opencode/opencode.json
+            # XDG dirs so session data lands on the PVC
+            - name: XDG_DATA_HOME
+              value: /data/opencode
+            - name: XDG_CONFIG_HOME
+              value: /data/opencode/config
+            {{- /* Provider API keys from secrets */ -}}
+            {{- if .Values.opencode.providers.anthropic.enabled }}
+            {{- $secretName := "" }}
+            {{- if .Values.opencode.providers.anthropic.existingSecret }}
+            {{- $secretName = .Values.opencode.providers.anthropic.existingSecret }}
+            {{- else if .Values.opencode.providers.anthropic.apiKey }}
+            {{- $secretName = printf "%s-anthropic" (include "platform-assistant.fullname" .) }}
+            {{- end }}
+            {{- if $secretName }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ .Values.opencode.providers.anthropic.existingSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.opencode.providers.githubCopilot.enabled }}
+            {{- $secretName := "" }}
+            {{- if .Values.opencode.providers.githubCopilot.existingSecret }}
+            {{- $secretName = .Values.opencode.providers.githubCopilot.existingSecret }}
+            {{- else if .Values.opencode.providers.githubCopilot.apiKey }}
+            {{- $secretName = printf "%s-github-copilot" (include "platform-assistant.fullname" .) }}
+            {{- end }}
+            {{- if $secretName }}
+            - name: GITHUB_COPILOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ .Values.opencode.providers.githubCopilot.existingSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.opencode.providers.custom.enabled }}
+            {{- $secretName := "" }}
+            {{- if .Values.opencode.providers.custom.existingSecret }}
+            {{- $secretName = .Values.opencode.providers.custom.existingSecret }}
+            {{- else if .Values.opencode.providers.custom.apiKey }}
+            {{- $secretName = printf "%s-custom" (include "platform-assistant.fullname" .) }}
+            {{- end }}
+            {{- if $secretName }}
+            - name: CUSTOM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ .Values.opencode.providers.custom.existingSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.opencode.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.opencode.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/opencode
+              readOnly: true
+            - name: workspace
+              mountPath: /workspace
+            - name: session-data
+              mountPath: /data/opencode
+          {{- with .Values.opencode.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "platform-assistant.opencode.fullname" . }}-config
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: {{ .Values.opencode.workspace.existingClaim | default (printf "%s-workspace" (include "platform-assistant.opencode.fullname" .)) }}
+        - name: session-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.opencode.sessionData.existingClaim | default (printf "%s-session" (include "platform-assistant.opencode.fullname" .)) }}
+
+      {{- with .Values.opencode.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.opencode.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.opencode.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

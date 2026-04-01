@@ -1,0 +1,68 @@
+name: Release Chart
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version override (leave empty to use Chart.yaml version)"
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  CHART_PATH: charts/platform-assistant
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    name: Package & Push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Add Helm repos
+        run: |
+          helm repo add ollama https://otwld.github.io/ollama-helm/
+          helm repo update
+
+      - name: Pull dependencies
+        run: helm dependency update ${{ env.CHART_PATH }}
+
+      - name: Override chart version
+        if: inputs.version != ''
+        run: |
+          sed -i "s/^version:.*/version: ${{ inputs.version }}/" ${{ env.CHART_PATH }}/Chart.yaml
+
+      - name: Helm lint
+        run: helm lint ${{ env.CHART_PATH }}
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Package chart
+        run: helm package ${{ env.CHART_PATH }} -d /tmp/charts
+
+      - name: Push to GHCR
+        run: |
+          for pkg in /tmp/charts/*.tgz; do
+            helm push "$pkg" oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+          done
+
+      - name: Summary
+        run: |
+          VERSION=$(helm show chart ${{ env.CHART_PATH }} | grep '^version:' | awk '{print $2}')
+          echo "## Chart Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry:** \`oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/platform-assistant\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "helm install platform-assistant oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/platform-assistant --version ${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

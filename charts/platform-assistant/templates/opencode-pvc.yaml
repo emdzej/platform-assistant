@@ -1,0 +1,43 @@
+{{- if not .Values.opencode.workspace.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "platform-assistant.opencode.fullname" . }}-workspace
+  labels:
+    {{- include "platform-assistant.opencode.labels" . | nindent 4 }}
+  {{- with .Values.opencode.workspace.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.opencode.workspace.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.opencode.workspace.size }}
+  {{- if .Values.opencode.workspace.storageClass }}
+  storageClassName: {{ .Values.opencode.workspace.storageClass | quote }}
+  {{- end }}
+{{- end }}
+---
+{{- if not .Values.opencode.sessionData.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "platform-assistant.opencode.fullname" . }}-session
+  labels:
+    {{- include "platform-assistant.opencode.labels" . | nindent 4 }}
+  {{- with .Values.opencode.sessionData.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.opencode.sessionData.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.opencode.sessionData.size }}
+  {{- if .Values.opencode.sessionData.storageClass }}
+  storageClassName: {{ .Values.opencode.sessionData.storageClass | quote }}
+  {{- end }}
+{{- end }}

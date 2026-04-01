@@ -1,0 +1,279 @@
+# =============================================================================
+# Platform Assistant — Helm Values
+# =============================================================================
+
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+# -- Namespace to deploy into (created if it doesn't exist)
+namespace: platform-assistant
+
+# =============================================================================
+# OpenCode
+# =============================================================================
+opencode:
+  image:
+    registry: ghcr.io
+    repository: anomalyco/opencode
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # -- Image pull secrets for private registries
+  imagePullSecrets: []
+
+  # -- Replicas (1 recommended — shared workspace)
+  replicaCount: 1
+
+  # -- Web UI settings
+  web:
+    port: 4096
+    # -- Bind address inside the container
+    hostname: "0.0.0.0"
+
+  service:
+    type: ClusterIP
+    port: 4096
+    annotations: {}
+
+  # -- Resource requests and limits
+  resources: {}
+    # requests:
+    #   cpu: 250m
+    #   memory: 512Mi
+    # limits:
+    #   cpu: "1"
+    #   memory: 1Gi
+
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod labels
+  podLabels: {}
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+
+  # ---------------------------------------------------------------------------
+  # LLM Providers
+  # ---------------------------------------------------------------------------
+  providers:
+    # -- Default provider used by OpenCode
+    default: "ollama"
+
+    # -- Ollama provider (uses in-cluster Ollama by default)
+    ollama:
+      enabled: true
+      # -- Model to use (must be available on the Ollama instance)
+      model: "qwen3.5:0.8b"
+      # -- Base URL override (defaults to in-cluster Ollama service)
+      baseURL: ""
+
+    # -- Anthropic provider
+    anthropic:
+      enabled: false
+      # -- API key (plaintext — use existingSecret for production)
+      apiKey: ""
+      # -- Use an existing Kubernetes Secret
+      existingSecret: ""
+      # -- Key within the existing secret
+      existingSecretKey: "ANTHROPIC_API_KEY"
+
+    # -- GitHub Copilot provider
+    githubCopilot:
+      enabled: false
+      # -- API key
+      apiKey: ""
+      existingSecret: ""
+      existingSecretKey: "GITHUB_COPILOT_TOKEN"
+
+    # -- OpenAI-compatible custom provider
+    custom:
+      enabled: false
+      # -- Provider name shown in OpenCode
+      name: ""
+      # -- Base URL
+      baseURL: ""
+      # -- API key
+      apiKey: ""
+      existingSecret: ""
+      existingSecretKey: "CUSTOM_API_KEY"
+
+  # ---------------------------------------------------------------------------
+  # Skills & Agents (init container)
+  # ---------------------------------------------------------------------------
+  registry:
+    # -- Enable init container that populates .opencode/ with skills/agents
+    enabled: true
+    # -- Git repository to clone
+    repository: "https://github.com/emdzej/opencode-registry.git"
+    # -- Branch, tag, or commit to checkout
+    ref: "main"
+    # -- Path within the repo to copy (relative to repo root)
+    path: "opencode"
+    # -- Init container image (must have git)
+    image:
+      registry: docker.io
+      repository: alpine/git
+      tag: "latest"
+      pullPolicy: IfNotPresent
+
+  # ---------------------------------------------------------------------------
+  # Persistence
+  # ---------------------------------------------------------------------------
+
+  # -- Workspace volume (project files, .opencode/ directory)
+  workspace:
+    # -- Use an existing PVC
+    existingClaim: ""
+    # -- Storage class (empty = cluster default)
+    storageClass: ""
+    # -- Size
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+
+  # -- Session data volume (OpenCode conversations, auth state)
+  sessionData:
+    # -- Use an existing PVC
+    existingClaim: ""
+    storageClass: ""
+    size: 2Gi
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+
+  # ---------------------------------------------------------------------------
+  # Extra OpenCode config (merged into opencode.json)
+  # ---------------------------------------------------------------------------
+  # -- Raw JSON merged into the generated opencode.json
+  extraConfig: {}
+
+  # -- Additional environment variables
+  env: []
+  # -- Additional envFrom sources
+  envFrom: []
+
+# =============================================================================
+# Kubernetes MCP Server (subchart)
+# =============================================================================
+kubernetesMcp:
+  # -- The subchart is always deployed
+  # Override any containers/kubernetes-mcp-server chart values here.
+
+  ingress:
+    enabled: false
+
+  serviceAccount:
+    create: true
+
+  rbac:
+    create: true
+    extraClusterRoleBindings:
+      - name: cluster-viewer
+        roleRef:
+          name: view
+          external: true
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  config:
+    port: "8080"
+    read_only: true
+    stateless: true
+
+# =============================================================================
+# ArgoCD MCP Server (custom templates, optional)
+# =============================================================================
+argocd:
+  # -- Enable the ArgoCD MCP server
+  enabled: false
+
+  image:
+    registry: ghcr.io
+    repository: argoproj-labs/mcp-for-argocd
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # -- ArgoCD server URL (in-cluster default)
+  baseURL: "http://argocd-server.argocd.svc.cluster.local"
+
+  # -- Read-only mode (disables create/update/delete/sync operations)
+  readOnly: true
+
+  # -- API token (plaintext — use existingSecret for production)
+  apiToken: ""
+  # -- Use an existing Kubernetes Secret containing the token
+  existingSecret: ""
+  # -- Key within the existing secret
+  existingSecretKey: "ARGOCD_API_TOKEN"
+
+  # -- Disable TLS verification (for self-signed certs)
+  tlsInsecure: true
+
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# RagClaw MCP Server (subchart, optional)
+# =============================================================================
+ragclawMcp:
+  # -- Enable the RagClaw MCP server
+  enabled: true
+
+  # Override any ragclaw-mcp chart values here.
+  # By default, ragclaw chart defaults are used.
+  # Example:
+  #   env:
+  #     - name: RAGCLAW_EMBEDDER
+  #       value: "ollama"
+
+# =============================================================================
+# Ollama (subchart, optional)
+# =============================================================================
+ollama:
+  # -- Enable the in-cluster Ollama instance
+  enabled: true
+
+  ollama:
+    # -- Models to pull on startup
+    models:
+      pull:
+        - qwen3.5:0.8b
+
+    # -- GPU configuration
+    gpu:
+      # -- Enable GPU acceleration
+      enabled: false
+      # -- GPU type: 'nvidia' or 'amd'
+      type: "nvidia"
+      # -- Number of GPUs
+      number: 1
+
+  # -- Persistence for model storage
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 11434

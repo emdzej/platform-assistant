@@ -1,0 +1,151 @@
+suite: ArgoCD MCP
+templates:
+  - templates/argocd-mcp-deployment.yaml
+  - templates/argocd-mcp-service.yaml
+  - templates/argocd-mcp-secret.yaml
+tests:
+  # ---- Conditional rendering ----
+  - it: should not render deployment when disabled
+    template: templates/argocd-mcp-deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render deployment when enabled
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should not render service when disabled
+    template: templates/argocd-mcp-service.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render service when enabled
+    template: templates/argocd-mcp-service.yaml
+    set:
+      argocd.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 3000
+
+  # ---- Environment ----
+  - it: should set ARGOCD_BASE_URL
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ARGOCD_BASE_URL
+            value: "http://argocd-server.argocd.svc.cluster.local"
+
+  - it: should set custom base URL
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+      argocd.baseURL: "https://argocd.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ARGOCD_BASE_URL
+            value: "https://argocd.example.com"
+
+  - it: should set read-only mode by default
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_READ_ONLY
+            value: "true"
+
+  - it: should disable read-only when configured
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+      argocd.readOnly: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MCP_READ_ONLY
+            value: "true"
+
+  - it: should set NODE_TLS_REJECT_UNAUTHORIZED when tlsInsecure
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "test-token"
+      argocd.tlsInsecure: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NODE_TLS_REJECT_UNAUTHORIZED
+            value: "0"
+
+  # ---- Secrets ----
+  - it: should create secret when apiToken is provided
+    template: templates/argocd-mcp-secret.yaml
+    set:
+      argocd.enabled: true
+      argocd.apiToken: "my-secret-token"
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: stringData.ARGOCD_API_TOKEN
+          value: "my-secret-token"
+
+  - it: should not create secret when existingSecret is set
+    template: templates/argocd-mcp-secret.yaml
+    set:
+      argocd.enabled: true
+      argocd.existingSecret: "my-existing-secret"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create secret when disabled
+    template: templates/argocd-mcp-secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should reference existing secret in deployment
+    template: templates/argocd-mcp-deployment.yaml
+    set:
+      argocd.enabled: true
+      argocd.existingSecret: "my-existing-secret"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ARGOCD_API_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: my-existing-secret
+                key: ARGOCD_API_TOKEN

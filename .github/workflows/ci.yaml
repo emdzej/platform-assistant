@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - ".github/workflows/ci.yaml"
+  pull_request:
+    paths:
+      - "charts/**"
+      - ".github/workflows/ci.yaml"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+
+      - name: Add Helm repos
+        run: |
+          helm repo add ollama https://otwld.github.io/ollama-helm/
+          helm repo update
+
+      - name: Pull OCI dependencies
+        run: helm dependency update charts/platform-assistant
+
+      - name: Helm lint
+        run: helm lint charts/platform-assistant
+
+      - name: Helm lint (ArgoCD enabled)
+        run: |
+          helm lint charts/platform-assistant \
+            --set argocd.enabled=true \
+            --set argocd.apiToken=lint-placeholder
+
+  template:
+    name: Template validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scenario:
+          - name: defaults
+            values: ""
+          - name: argocd-enabled
+            values: "--set argocd.enabled=true --set argocd.apiToken=test"
+          - name: ollama-disabled
+            values: "--set ollama.enabled=false --set opencode.providers.anthropic.enabled=true --set opencode.providers.anthropic.apiKey=test"
+          - name: all-providers
+            values: "--set argocd.enabled=true --set argocd.apiToken=test --set opencode.providers.anthropic.enabled=true --set opencode.providers.anthropic.apiKey=test --set opencode.providers.githubCopilot.enabled=true --set opencode.providers.githubCopilot.apiKey=test"
+          - name: existing-secrets
+            values: "--set opencode.providers.anthropic.enabled=true --set opencode.providers.anthropic.existingSecret=my-secret"
+          - name: existing-pvcs
+            values: "--set opencode.workspace.existingClaim=my-ws --set opencode.sessionData.existingClaim=my-session"
+          - name: registry-disabled
+            values: "--set opencode.registry.enabled=false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Add Helm repos
+        run: |
+          helm repo add ollama https://otwld.github.io/ollama-helm/
+          helm repo update
+
+      - name: Pull dependencies
+        run: helm dependency update charts/platform-assistant
+
+      - name: Template — ${{ matrix.scenario.name }}
+        run: |
+          helm template test charts/platform-assistant ${{ matrix.scenario.values }}
+
+  chart-testing:
+    name: Chart Testing (ct lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+
+      - name: Add Helm repos
+        run: |
+          helm repo add ollama https://otwld.github.io/ollama-helm/
+          helm repo update
+
+      - uses: helm/chart-testing-action@v2
+
+      - name: ct lint
+        run: ct lint --config ct.yaml
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git
+
+      - name: Add Helm repos
+        run: |
+          helm repo add ollama https://otwld.github.io/ollama-helm/
+          helm repo update
+
+      - name: Pull dependencies
+        run: helm dependency update charts/platform-assistant
+
+      - name: Run unit tests
+        run: helm unittest charts/platform-assistant

@@ -1,0 +1,12 @@
+dependencies:
+- name: kubernetes-mcp-server
+  repository: oci://ghcr.io/containers/charts
+  version: 0.1.0
+- name: ollama
+  repository: https://otwld.github.io/ollama-helm/
+  version: 1.12.0
+- name: ragclaw-mcp
+  repository: oci://ghcr.io/emdzej/charts
+  version: 0.1.0
+digest: sha256:7353650925ecf6a4a5f7916c1f8b1dcfed1dbc5eea2977f711934bec0bd29a77
+generated: "2026-04-01T11:12:04.723861+02:00"

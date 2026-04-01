@@ -1,0 +1,231 @@
+suite: OpenCode
+templates:
+  - templates/opencode-deployment.yaml
+  - templates/opencode-configmap.yaml
+  - templates/opencode-service.yaml
+  - templates/opencode-pvc.yaml
+tests:
+  # ---- Deployment ----
+  - it: should render deployment with default values
+    template: templates/opencode-deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: web
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "0.0.0.0"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "4096"
+
+  - it: should have init container when registry is enabled
+    template: templates/opencode-deployment.yaml
+    asserts:
+      - isNotEmpty:
+          path: spec.template.spec.initContainers
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: fetch-registry
+
+  - it: should skip init container when registry is disabled
+    template: templates/opencode-deployment.yaml
+    set:
+      opencode.registry.enabled: false
+    asserts:
+      - isNull:
+          path: spec.template.spec.initContainers
+
+  - it: should mount config, workspace, and session volumes
+    template: templates/opencode-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /etc/opencode
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: workspace
+            mountPath: /workspace
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: session-data
+            mountPath: /data/opencode
+
+  - it: should inject Anthropic API key from chart-managed secret
+    template: templates/opencode-deployment.yaml
+    set:
+      opencode.providers.anthropic.enabled: true
+      opencode.providers.anthropic.apiKey: "sk-test"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ANTHROPIC_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-platform-assistant-anthropic
+                key: ANTHROPIC_API_KEY
+
+  - it: should inject Anthropic API key from existing secret
+    template: templates/opencode-deployment.yaml
+    set:
+      opencode.providers.anthropic.enabled: true
+      opencode.providers.anthropic.existingSecret: "my-secret"
+      opencode.providers.anthropic.existingSecretKey: "MY_KEY"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ANTHROPIC_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: my-secret
+                key: MY_KEY
+
+  - it: should use existing workspace PVC when specified
+    template: templates/opencode-deployment.yaml
+    set:
+      opencode.workspace.existingClaim: "my-workspace-pvc"
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: workspace
+            persistentVolumeClaim:
+              claimName: my-workspace-pvc
+
+  # ---- ConfigMap ----
+  - it: should include Ollama provider by default
+    template: templates/opencode-configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - matchRegex:
+          path: data["opencode.json"]
+          pattern: '"ollama"'
+      - matchRegex:
+          path: data["opencode.json"]
+          pattern: "ollama:11434/v1/"
+
+  - it: should include kubernetes MCP by default
+    template: templates/opencode-configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["opencode.json"]
+          pattern: "kubernetes-mcp-server:8080/mcp"
+
+  - it: should include ragclaw MCP when enabled
+    template: templates/opencode-configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["opencode.json"]
+          pattern: "ragclaw-mcp:3000/mcp"
+
+  - it: should not include ragclaw MCP when disabled
+    template: templates/opencode-configmap.yaml
+    set:
+      ragclawMcp.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["opencode.json"]
+          pattern: "ragclaw"
+
+  - it: should include argocd MCP when enabled
+    template: templates/opencode-configmap.yaml
+    set:
+      argocd.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["opencode.json"]
+          pattern: "argocd-mcp:3000/mcp"
+
+  - it: should not include argocd MCP when disabled
+    template: templates/opencode-configmap.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["opencode.json"]
+          pattern: "argocd"
+
+  - it: should not include Ollama provider when Ollama is disabled
+    template: templates/opencode-configmap.yaml
+    set:
+      ollama.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["opencode.json"]
+          pattern: "ollama"
+
+  # ---- Service ----
+  - it: should render ClusterIP service by default
+    template: templates/opencode-service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 4096
+
+  - it: should allow service type override
+    template: templates/opencode-service.yaml
+    set:
+      opencode.service.type: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  # ---- PVCs ----
+  - it: should create workspace PVC with defaults
+    template: templates/opencode-pvc.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.resources.requests.storage
+          value: 5Gi
+
+  - it: should create session PVC with defaults
+    template: templates/opencode-pvc.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: spec.resources.requests.storage
+          value: 2Gi
+
+  - it: should skip workspace PVC when existingClaim is set
+    template: templates/opencode-pvc.yaml
+    documentIndex: 0
+    set:
+      opencode.workspace.existingClaim: "my-pvc"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should set storageClass when specified
+    template: templates/opencode-pvc.yaml
+    documentIndex: 0
+    set:
+      opencode.workspace.storageClass: "fast-ssd"
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: "fast-ssd"

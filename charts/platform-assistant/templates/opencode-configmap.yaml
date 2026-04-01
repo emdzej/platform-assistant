@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platform-assistant.opencode.fullname" . }}-config
+  labels:
+    {{- include "platform-assistant.opencode.labels" . | nindent 4 }}
+data:
+  opencode.json: |
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "provider": {
+        {{- $providers := list }}
+        {{- if and .Values.ollama.enabled .Values.opencode.providers.ollama.enabled }}
+        {{- $providers = append $providers "ollama" }}
+        "ollama": {
+          "id": "ollama",
+          "name": "Ollama",
+          "options": {
+            "baseURL": {{ if .Values.opencode.providers.ollama.baseURL }}{{ .Values.opencode.providers.ollama.baseURL | quote }}{{ else }}{{ include "platform-assistant.ollama.url" . | quote }}{{ end }}
+          }
+        }
+        {{- end }}
+        {{- if .Values.opencode.providers.anthropic.enabled }}
+        {{- if $providers }},{{ end }}
+        {{- $providers = append $providers "anthropic" }}
+        "anthropic": {
+          "id": "anthropic",
+          "name": "Anthropic",
+          "options": {
+            "apiKey": "{env:ANTHROPIC_API_KEY}"
+          }
+        }
+        {{- end }}
+        {{- if .Values.opencode.providers.githubCopilot.enabled }}
+        {{- if $providers }},{{ end }}
+        {{- $providers = append $providers "github-copilot" }}
+        "github-copilot": {
+          "id": "github-copilot",
+          "name": "GitHub Copilot"
+        }
+        {{- end }}
+        {{- if .Values.opencode.providers.custom.enabled }}
+        {{- if $providers }},{{ end }}
+        "custom": {
+          "id": "custom",
+          "name": {{ .Values.opencode.providers.custom.name | default "Custom" | quote }},
+          "options": {
+            "baseURL": {{ .Values.opencode.providers.custom.baseURL | quote }},
+            "apiKey": "{env:CUSTOM_API_KEY}"
+          }
+        }
+        {{- end }}
+      },
+      "mcp": {
+        "kubernetes": {
+          "type": "remote",
+          "url": {{ include "platform-assistant.kubernetesMcp.url" . | quote }},
+          "enabled": true
+        }
+        {{- if .Values.argocd.enabled }}
+        ,"argocd": {
+          "type": "remote",
+          "url": {{ include "platform-assistant.argocd.url" . | quote }},
+          "enabled": true
+        }
+        {{- end }}
+        {{- if .Values.ragclawMcp.enabled }}
+        ,"ragclaw": {
+          "type": "remote",
+          "url": {{ include "platform-assistant.ragclawMcp.url" . | quote }},
+          "enabled": true
+        }
+        {{- end }}
+      }
+      {{- if .Values.opencode.extraConfig }}
+      {{- range $key, $value := .Values.opencode.extraConfig }}
+      ,{{ $key | quote }}: {{ $value | toJson }}
+      {{- end }}
+      {{- end }}
+    }

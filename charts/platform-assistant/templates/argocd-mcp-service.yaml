@@ -1,0 +1,21 @@
+{{- if .Values.argocd.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-assistant.argocd.fullname" . }}
+  labels:
+    {{- include "platform-assistant.argocd.labels" . | nindent 4 }}
+  {{- with .Values.argocd.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.argocd.service.type }}
+  ports:
+    - port: {{ .Values.argocd.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "platform-assistant.argocd.selectorLabels" . | nindent 4 }}
+{{- end }}

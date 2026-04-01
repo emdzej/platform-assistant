@@ -1,0 +1,39 @@
+
+=============================================================
+  Platform Assistant has been deployed!
+=============================================================
+
+OpenCode Web UI:
+  kubectl port-forward svc/{{ include "platform-assistant.opencode.fullname" . }} {{ .Values.opencode.service.port }}:{{ .Values.opencode.service.port }} -n {{ .Release.Namespace }}
+  Then open: http://localhost:{{ .Values.opencode.service.port }}
+
+MCP Servers:
+  - Kubernetes MCP: {{ include "platform-assistant.kubernetesMcp.url" . }}
+{{- if .Values.argocd.enabled }}
+  - ArgoCD MCP:     {{ include "platform-assistant.argocd.url" . }}
+{{- end }}
+{{- if .Values.ragclawMcp.enabled }}
+  - RagClaw MCP:    {{ include "platform-assistant.ragclawMcp.url" . }}
+{{- end }}
+
+LLM Provider:
+{{- if .Values.ollama.enabled }}
+  Ollama (in-cluster) with model: {{ (index .Values.ollama.ollama.models.pull 0) }}
+  NOTE: First startup may take a few minutes while the model is downloaded.
+{{- else }}
+  Ollama is disabled. Make sure you have configured an external provider.
+{{- end }}
+{{- if .Values.opencode.providers.anthropic.enabled }}
+  Anthropic: configured
+{{- end }}
+{{- if .Values.opencode.providers.githubCopilot.enabled }}
+  GitHub Copilot: configured
+{{- end }}
+
+{{- if .Values.argocd.enabled }}
+{{- if and (not .Values.argocd.apiToken) (not .Values.argocd.existingSecret) }}
+
+WARNING: ArgoCD MCP is enabled but no API token is configured.
+  Create a secret and set argocd.existingSecret, or provide argocd.apiToken.
+{{- end }}
+{{- end }}
