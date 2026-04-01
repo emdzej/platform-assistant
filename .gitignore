@@ -1,0 +1,12 @@
+# Helm subchart archives (pulled by helm dependency update)
+charts/*/charts/*.tgz
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
