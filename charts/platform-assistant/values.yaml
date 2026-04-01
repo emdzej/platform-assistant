@@ -88,7 +88,7 @@ opencode:
     ollama:
       enabled: true
       # -- Model to use (must be available on the Ollama instance)
-      model: "qwen2.5:0.5b"
+      model: "qwen3.5:0.8b"
       # -- Base URL override (defaults to in-cluster Ollama service)
       baseURL: ""
 
@@ -129,7 +129,7 @@ opencode:
     # -- Enable init container that populates .opencode/ with skills/agents
     enabled: true
     # -- Git repository to clone
-    repository: "https://github.com/emdzej/opencode-registry.git"
+    repository: "https://github.com/emdzej/platform-assistant.git"
     # -- Branch, tag, or commit to checkout
     ref: "main"
     # -- Path within the repo to copy (relative to repo root)
@@ -279,7 +279,7 @@ ollama:
   # -- Models to pull on startup (via init container)
   models:
     pull:
-      - qwen2.5:0.5b
+      - qwen3.5:0.8b
 
   # -- GPU configuration
   gpu:

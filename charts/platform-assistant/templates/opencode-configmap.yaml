@@ -28,6 +28,9 @@ data:
   opencode.json: |
     {
       "$schema": "https://opencode.ai/config.json",
+      {{- if and .Values.ollama.enabled .Values.opencode.providers.ollama.enabled }}
+      "model": {{ printf "ollama/%s" .Values.opencode.providers.ollama.model | quote }},
+      {{- end }}
       "provider": {
         {{- $providers := list }}
         {{- if and .Values.ollama.enabled .Values.opencode.providers.ollama.enabled }}
@@ -37,6 +40,11 @@ data:
           "name": "Ollama",
           "options": {
             "baseURL": {{ if .Values.opencode.providers.ollama.baseURL }}{{ .Values.opencode.providers.ollama.baseURL | quote }}{{ else }}{{ include "platform-assistant.ollama.url" . | quote }}{{ end }}
+          },
+          "models": {
+            {{ .Values.opencode.providers.ollama.model | quote }}: {
+              "name": {{ .Values.opencode.providers.ollama.model | quote }}
+            }
           }
         }
         {{- end }}

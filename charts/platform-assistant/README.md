@@ -14,7 +14,7 @@ Platform Assistant deploys a pre-configured OpenCode web UI connected to:
 | **RagClaw MCP** | RAG search over indexed documents/code | Enabled |
 | **ArgoCD MCP** | GitOps operations via MCP | Disabled |
 
-Skills and agents from the [opencode-registry](https://github.com/emdzej/opencode-registry) are automatically loaded on startup, providing platform engineering workflows like `kubernetes-ops`, `argocd-ops`, and `kb-search`.
+Skills and agents are bundled in the [`opencode/`](../../opencode) directory of this repository and loaded on startup, providing platform engineering workflows like `kubernetes-ops`, `argocd-ops`, and `kb-search`.
 
 ## Prerequisites
 
@@ -134,7 +134,7 @@ graph LR
 | Key | Description | Default |
 |-----|-------------|---------|
 | `opencode.registry.enabled` | Fetch skills/agents on startup | `true` |
-| `opencode.registry.repository` | Git repository URL | `https://github.com/emdzej/opencode-registry.git` |
+| `opencode.registry.repository` | Git repository URL | `https://github.com/emdzej/platform-assistant.git` |
 | `opencode.registry.ref` | Branch, tag, or commit | `main` |
 | `opencode.registry.path` | Path within repo to copy | `opencode` |
 | `opencode.registry.image.repository` | Init container image | `alpine/git` |
