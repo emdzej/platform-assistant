@@ -133,10 +133,30 @@ http://{{ .Release.Name }}-ragclaw-mcp:{{ (index .Values "ragclaw-mcp").service.
 {{- end }}
 
 {{/*
+Ollama component labels
+*/}}
+{{- define "platform-assistant.ollama.labels" -}}
+{{ include "platform-assistant.labels" . }}
+app.kubernetes.io/component: ollama
+{{- end }}
+
+{{- define "platform-assistant.ollama.selectorLabels" -}}
+{{ include "platform-assistant.selectorLabels" . }}
+app.kubernetes.io/component: ollama
+{{- end }}
+
+{{/*
+Ollama fullname
+*/}}
+{{- define "platform-assistant.ollama.fullname" -}}
+{{- printf "%s-ollama" (include "platform-assistant.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Ollama service URL
 */}}
 {{- define "platform-assistant.ollama.url" -}}
-http://{{ .Release.Name }}-ollama:{{ .Values.ollama.service.port | default 11434 }}/v1/
+http://{{ include "platform-assistant.ollama.fullname" . }}:{{ .Values.ollama.service.port | default 11434 }}/v1/
 {{- end }}
 
 {{/*

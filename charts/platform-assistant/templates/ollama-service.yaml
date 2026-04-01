@@ -18,32 +18,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-apiVersion: v2
-name: platform-assistant
-description: AI-powered platform assistant for Kubernetes — ships OpenCode with MCP servers for cluster ops, ArgoCD, and RAG search
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
-
-keywords:
-  - ai
-  - opencode
-  - mcp
-  - kubernetes
-  - platform-engineering
-  - argocd
-  - rag
-
-maintainers:
-  - name: emdzej
-
-dependencies:
-  - name: kubernetes-mcp-server
-    version: "0.1.0"
-    repository: "oci://ghcr.io/containers/charts"
-    alias: kubernetes-mcp
-
-  - name: ragclaw-mcp
-    version: "0.1.0"
-    repository: "oci://ghcr.io/emdzej/charts"
-    condition: ragclaw-mcp.enabled
+{{- if .Values.ollama.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-assistant.ollama.fullname" . }}
+  labels:
+    {{- include "platform-assistant.ollama.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.ollama.service.type }}
+  ports:
+    - port: {{ .Values.ollama.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "platform-assistant.ollama.selectorLabels" . | nindent 4 }}
+{{- end }}

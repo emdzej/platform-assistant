@@ -88,7 +88,7 @@ opencode:
     ollama:
       enabled: true
       # -- Model to use (must be available on the Ollama instance)
-      model: "qwen3.5:0.8b"
+      model: "qwen2.5:0.5b"
       # -- Base URL override (defaults to in-cluster Ollama service)
       baseURL: ""
 
@@ -264,30 +264,37 @@ ragclaw-mcp:
   #       value: "ollama"
 
 # =============================================================================
-# Ollama (subchart, optional)
+# Ollama (custom templates, optional)
 # =============================================================================
 ollama:
   # -- Enable the in-cluster Ollama instance
   enabled: true
 
-  ollama:
-    # -- Models to pull on startup
-    models:
-      pull:
-        - qwen3.5:0.8b
+  image:
+    registry: docker.io
+    repository: ollama/ollama
+    tag: "latest"
+    pullPolicy: IfNotPresent
 
-    # -- GPU configuration
-    gpu:
-      # -- Enable GPU acceleration
-      enabled: false
-      # -- GPU type: 'nvidia' or 'amd'
-      type: "nvidia"
-      # -- Number of GPUs
-      number: 1
+  # -- Models to pull on startup (via init container)
+  models:
+    pull:
+      - qwen2.5:0.5b
+
+  # -- GPU configuration
+  gpu:
+    # -- Enable GPU acceleration
+    enabled: false
+    # -- GPU type: 'nvidia' or 'amd'
+    type: "nvidia"
+    # -- Number of GPUs
+    number: 1
 
   # -- Persistence for model storage
-  persistentVolume:
+  persistence:
     enabled: true
+    # -- Use an existing PVC
+    existingClaim: ""
     size: 10Gi
     storageClass: ""
     accessModes:
@@ -297,3 +304,11 @@ ollama:
   service:
     type: ClusterIP
     port: 11434
+
+  # -- Resource requests and limits
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

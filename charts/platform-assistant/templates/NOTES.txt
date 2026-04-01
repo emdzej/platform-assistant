@@ -39,7 +39,7 @@ MCP Servers:
 
 LLM Provider:
 {{- if .Values.ollama.enabled }}
-  Ollama (in-cluster) with model: {{ (index .Values.ollama.ollama.models.pull 0) }}
+  Ollama (in-cluster) with model: {{ (index .Values.ollama.models.pull 0) }}
   NOTE: First startup may take a few minutes while the model is downloaded.
 {{- else }}
   Ollama is disabled. Make sure you have configured an external provider.

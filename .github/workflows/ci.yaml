@@ -42,11 +42,6 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      - name: Add Helm repos
-        run: |
-          helm repo add ollama https://otwld.github.io/ollama-helm/
-          helm repo update
-
       - name: Pull OCI dependencies
         run: helm dependency update charts/platform-assistant
 
@@ -84,11 +79,6 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      - name: Add Helm repos
-        run: |
-          helm repo add ollama https://otwld.github.io/ollama-helm/
-          helm repo update
-
       - name: Pull dependencies
         run: helm dependency update charts/platform-assistant
 
@@ -106,11 +96,6 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      - name: Add Helm repos
-        run: |
-          helm repo add ollama https://otwld.github.io/ollama-helm/
-          helm repo update
-
       - uses: helm/chart-testing-action@v2
 
       - name: ct lint
@@ -126,11 +111,6 @@ jobs:
 
       - name: Install helm-unittest
         run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest.git
-
-      - name: Add Helm repos
-        run: |
-          helm repo add ollama https://otwld.github.io/ollama-helm/
-          helm repo update
 
       - name: Pull dependencies
         run: helm dependency update charts/platform-assistant

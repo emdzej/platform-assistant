@@ -18,32 +18,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-apiVersion: v2
-name: platform-assistant
-description: AI-powered platform assistant for Kubernetes — ships OpenCode with MCP servers for cluster ops, ArgoCD, and RAG search
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
-
-keywords:
-  - ai
-  - opencode
-  - mcp
-  - kubernetes
-  - platform-engineering
-  - argocd
-  - rag
-
-maintainers:
-  - name: emdzej
-
-dependencies:
-  - name: kubernetes-mcp-server
-    version: "0.1.0"
-    repository: "oci://ghcr.io/containers/charts"
-    alias: kubernetes-mcp
-
-  - name: ragclaw-mcp
-    version: "0.1.0"
-    repository: "oci://ghcr.io/emdzej/charts"
-    condition: ragclaw-mcp.enabled
+{{- if and .Values.ollama.enabled .Values.ollama.persistence.enabled (not .Values.ollama.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "platform-assistant.ollama.fullname" . }}
+  labels:
+    {{- include "platform-assistant.ollama.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- range .Values.ollama.persistence.accessModes }}
+    - {{ . }}
+    {{- end }}
+  {{- if .Values.ollama.persistence.storageClass }}
+  storageClassName: {{ .Values.ollama.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.ollama.persistence.size }}
+{{- end }}
