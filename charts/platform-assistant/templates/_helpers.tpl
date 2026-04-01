@@ -93,7 +93,7 @@ The subchart uses its own fullname, which for an aliased dependency is:
   <release>-<alias>
 */}}
 {{- define "platform-assistant.kubernetesMcp.url" -}}
-http://{{ .Release.Name }}-kubernetes-mcp-server:{{ .Values.kubernetesMcp.service.port }}/mcp
+http://{{ .Release.Name }}-kubernetes-mcp:{{ (index .Values "kubernetes-mcp").service.port }}/mcp
 {{- end }}
 
 {{/*
@@ -107,7 +107,7 @@ http://{{ include "platform-assistant.argocd.fullname" . }}:{{ .Values.argocd.se
 RagClaw MCP service URL
 */}}
 {{- define "platform-assistant.ragclawMcp.url" -}}
-http://{{ .Release.Name }}-ragclaw-mcp:{{ .Values.ragclawMcp.service.port | default 3000 }}/mcp
+http://{{ .Release.Name }}-ragclaw-mcp:{{ (index .Values "ragclaw-mcp").service.port | default 3000 }}/mcp
 {{- end }}
 
 {{/*

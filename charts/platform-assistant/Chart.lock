@@ -8,5 +8,5 @@ dependencies:
 - name: ragclaw-mcp
   repository: oci://ghcr.io/emdzej/charts
   version: 0.1.0
-digest: sha256:7353650925ecf6a4a5f7916c1f8b1dcfed1dbc5eea2977f711934bec0bd29a77
-generated: "2026-04-01T11:12:04.723861+02:00"
+digest: sha256:c8524819d2048777c4425f2170393c6bd542e93d8cce31693647aa8f942c52be
+generated: "2026-04-01T11:24:01.243255+02:00"

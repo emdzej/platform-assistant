@@ -12,7 +12,7 @@ MCP Servers:
 {{- if .Values.argocd.enabled }}
   - ArgoCD MCP:     {{ include "platform-assistant.argocd.url" . }}
 {{- end }}
-{{- if .Values.ragclawMcp.enabled }}
+{{- if (index .Values "ragclaw-mcp").enabled }}
   - RagClaw MCP:    {{ include "platform-assistant.ragclawMcp.url" . }}
 {{- end }}
 

@@ -125,7 +125,7 @@ tests:
     asserts:
       - matchRegex:
           path: data["opencode.json"]
-          pattern: "kubernetes-mcp-server:8080/mcp"
+          pattern: "kubernetes-mcp:8080/mcp"
 
   - it: should include ragclaw MCP when enabled
     template: templates/opencode-configmap.yaml
@@ -137,7 +137,7 @@ tests:
   - it: should not include ragclaw MCP when disabled
     template: templates/opencode-configmap.yaml
     set:
-      ragclawMcp.enabled: false
+      ragclaw-mcp.enabled: false
     asserts:
       - notMatchRegex:
           path: data["opencode.json"]

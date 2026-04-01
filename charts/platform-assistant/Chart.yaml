@@ -21,7 +21,7 @@ dependencies:
   - name: kubernetes-mcp-server
     version: "0.1.0"
     repository: "oci://ghcr.io/containers/charts"
-    alias: kubernetesMcp
+    alias: kubernetes-mcp
 
   - name: ollama
     version: "1.12.0"
@@ -31,5 +31,4 @@ dependencies:
   - name: ragclaw-mcp
     version: "0.1.0"
     repository: "oci://ghcr.io/emdzej/charts"
-    alias: ragclawMcp
-    condition: ragclawMcp.enabled
+    condition: ragclaw-mcp.enabled

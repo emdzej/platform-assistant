@@ -157,10 +157,10 @@ helm install platform-assistant \
 
 | Key | Description | Default |
 |-----|-------------|---------|
-| `kubernetesMcp.config.read_only` | Read-only mode | `true` |
-| `kubernetesMcp.config.stateless` | Stateless mode (recommended) | `true` |
-| `kubernetesMcp.rbac.extraClusterRoleBindings` | RBAC bindings | `[{view ClusterRole}]` |
-| `kubernetesMcp.service.port` | Service port | `8080` |
+| `kubernetes-mcp.config.read_only` | Read-only mode | `true` |
+| `kubernetes-mcp.config.stateless` | Stateless mode (recommended) | `true` |
+| `kubernetes-mcp.rbac.extraClusterRoleBindings` | RBAC bindings | `[{view ClusterRole}]` |
+| `kubernetes-mcp.service.port` | Service port | `8080` |
 
 ### ArgoCD MCP Server
 
@@ -178,9 +178,9 @@ helm install platform-assistant \
 
 | Key | Description | Default |
 |-----|-------------|---------|
-| `ragclawMcp.enabled` | Deploy RagClaw MCP server | `true` |
+| `ragclaw-mcp.enabled` | Deploy RagClaw MCP server | `true` |
 
-All [ragclaw-mcp chart values](https://github.com/emdzej/ragclaw) can be overridden under the `ragclawMcp` key.
+All [ragclaw-mcp chart values](https://github.com/emdzej/ragclaw) can be overridden under the `ragclaw-mcp` key.
 
 ### Ollama
 

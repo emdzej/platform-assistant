@@ -161,7 +161,7 @@ opencode:
 # =============================================================================
 # Kubernetes MCP Server (subchart)
 # =============================================================================
-kubernetesMcp:
+kubernetes-mcp:
   # -- The subchart is always deployed
   # Override any containers/kubernetes-mcp-server chart values here.
 
@@ -232,7 +232,7 @@ argocd:
 # =============================================================================
 # RagClaw MCP Server (subchart, optional)
 # =============================================================================
-ragclawMcp:
+ragclaw-mcp:
   # -- Enable the RagClaw MCP server
   enabled: true
 

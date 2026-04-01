@@ -64,7 +64,7 @@ data:
           "enabled": true
         }
         {{- end }}
-        {{- if .Values.ragclawMcp.enabled }}
+        {{- if (index .Values "ragclaw-mcp").enabled }}
         ,"ragclaw": {
           "type": "remote",
           "url": {{ include "platform-assistant.ragclawMcp.url" . | quote }},
